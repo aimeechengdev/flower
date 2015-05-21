@@ -1,7 +1,14 @@
 angular.module('flower', ['angularFileUpload'])
   .controller('FlowerController', function( $scope, $http, FileUploader) {
-    $scope.uploader = new FileUploader();
-    
+    $scope.uploader = new FileUploader({
+            url: 'flower'
+        });
+            $scope.uploader.onSuccessItem = function(fileItem, response, status, headers) {
+            console.info('onSuccessItem', fileItem, response, status, headers);
+             $scope.flowerList.push(response);
+        };
+    $scope.flowerList = [];
+    $scope.flowerList.push({"name":"Rose"});
     $scope.uploadImg = function(){
       var tmp = $scope.uploader;
     };
@@ -24,6 +31,9 @@ angular.module('flower', ['angularFileUpload'])
       $scope.imgShow = true;
       $('#myImg').attr('src', e.target.result);
       $scope.chosenFile = $scope.uploader.queue[$scope.uploader.queue.length-1];
+      $scope.chosenFile.upload();
+  
+     
        
     };
   });

@@ -51,12 +51,12 @@ app.use(express.static(path.resolve(__dirname, 'client')));
 //app.use(bodyParser.json());
 //app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.bodyParser({uploadDir:'./uploads'}));
-app.post('/',function(req,res){
+app.post('/flower',function(req,res){
   console.log("post called");
     var originalFilename=req.files.file.originalFilename;
   var path=req.files.file.path;
   console.log("OriginalFilename = "+originalFilename+", path is "+path);
-  res.end("yes");
+  res.json({'name':'Anemone','species':'something'});
 });
 
 app.get('/car',function(req,res){
