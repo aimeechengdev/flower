@@ -17,32 +17,29 @@
       <div class="navbar navbar-fixed-top navbar-inverse">
         <div class="navbar-inner">
           <div class="pull-right">
-            <a href="https://c9.io" class="brand">Cloud9 IDE</a>
+            <a href="#" class="brand">Aimee Cheng</a>
           </div>
         </div>
       </div>
       <div class="page-header">
-        <h1>Flower Example</h1>
+        <h1>Flower Detector</h1>
       </div>
       <div class="row">
         <div class="span3">
           <ul class="nav nav-list well">
-            <li class="nav-header">Local Users</li>
-            <li ng-repeat="user in roster" ng-bind="user">
+            <li class="nav-header">Instruction</li>
+            <li>
             </li>
           </ul>
         </div>
         <div class="span9">
           <input type="file" nv-file-select uploader="uploader"/><br/>
-          <ul>
-            <li ng-repeat="item in uploader.queue">
-                Name: <span ng-bind="item.file.name"></span><br/>
-                <button ng-click="item.upload()">upload</button>
-            </li>
-          </ul>
+          
+                <button ng-click="chosenFile.upload()">upload</button>
+
         </div>
-        <button ng-click="item.uploadImg()">upload image</button>
-        <img id="myImg" src="#" alt="your image" />
+     <!--  <button ng-click="item.uploadImg()">upload image</button>-->
+        <img ng-show="imgShow" id="myImg" src="#" alt="your image" />
       </div>
     </div>
     <script src="/js/jquery.min.js"></script>
