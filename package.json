@@ -9,6 +9,7 @@
     "body-parser": "^1.8.1",
     "express": "^3.2.6",
     "flickrapi": "^0.3.32",
+    "gm": "^1.18.1",
     "mongoose": "^4.0.3",
     "socket.io": "~0.9.14"
   },
