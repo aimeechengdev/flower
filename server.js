@@ -1,11 +1,15 @@
-//
-// # SimpleServer
-//
-// A simple chat server using Socket.IO, Express, and Async.
-//
-var http = require('http');
-var path = require('path');
-//var db = require('./db');
+//detector
+var fs = require('fs');
+
+var detect = function(path){
+  console.log("in detect, path is "+path);
+  fs.readFile(path, function (err, data) {
+  if (err) throw err;
+  console.log("in detect, data is "+data);
+});
+};
+
+//database
 var mongoose = require('mongoose');
 mongoose.connect('mongodb://aimeechengdev:Pepper0620@ds031942.mongolab.com:31942/flower');
 var db = mongoose.connection;
@@ -13,56 +17,48 @@ db.on('error', console.error.bind(console, 'connection error:'));
 db.once('open', function (callback) {
   // yay!
 });
-var kittySchema = mongoose.Schema({
-    name: String
+var schema = mongoose.Schema({
+    name: String,
+    originalName: String,
+    path: String
 })
-var Kitten = mongoose.model('Kitten', kittySchema)
-var silence = new Kitten({ name: 'Silence' })
-console.log(silence.name) // 'Silence'
-var fluffy = new Kitten({ name: 'fluffy' });
-fluffy.save(function (err, fluffy) {
+var Flower = mongoose.model('Flower', schema)
+var flower = new Flower();
+
+Flower.find(function (err, flowers) {
   if (err) return console.error(err);
-//  fluffy.speak();
-});
-Kitten.find(function (err, kittens) {
-  if (err) return console.error(err);
-  console.log(kittens)
+  console.log(flowers)
 })
 
-
-
-
-
-
-
-
-
+//server
+var http = require('http');
+var path = require('path');
 var express = require('express');
-//var bodyParser     =        require("body-parser");
-//
-// ## SimpleServer `SimpleServer(obj)`
-//
-// Creates a new instance of SimpleServer with the following options:
-//  * `port` - The HTTP port to listen on. If `process.env.PORT` is set, _it overrides this value_.
-//
 var app = express();
 var server = http.createServer(app);
 app.use(express.static(path.resolve(__dirname, 'client')));
-//app.use(bodyParser.json());
-//app.use(bodyParser.urlencoded({ extended: false }));
-app.use(express.bodyParser({uploadDir:'./uploads'}));
+app.use(express.bodyParser({uploadDir:'./uploads', keepExtensions: true}));
+
 app.post('/flower',function(req,res){
   console.log("post called");
-    var originalFilename=req.files.file.originalFilename;
-  var path=req.files.file.path;
-  console.log("OriginalFilename = "+originalFilename+", path is "+path);
-  res.json({'name':'Anemone','species':'something'});
+  var originalName = req.files.file.name;
+  var path = req.files.file.path;
+  console.log("OriginalFilename = "+originalName+", path is "+path);
+  detect(path);
+  flower.name = 'Rose';
+  flower.originalName = originalName;
+  flower.path = path;
+  flower.save(function (err, fluffy) {
+    if (err) return console.error(err);
+  });
+  res.json({'name':'Anemone','originalName':originalName});
 });
 
-app.get('/car',function(req,res){
-  res.json({'car':'cara','weight':30});
-});
 server.listen(process.env.PORT || 3000, process.env.IP || "0.0.0.0", function(){
   var addr = server.address();
-  console.log("Chat server listening at", addr.address + ":" + addr.port);
+  console.log("Flower server listening at", addr.address + ":" + addr.port);
 });
+
+
+
+
