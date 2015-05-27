@@ -4,61 +4,46 @@ var gm = require('gm').subClass({imageMagick: true});
 
 var detect = function(path){
   var fileName = path.split('/')[1];
-  var resizePath = 'output/resize/' + fileName;
-  var blurPath = 'output/blur/' + fileName;
-  var edgePath = 'output/edge/' + fileName;
-  var overlayPath = 'output/overlay/' + fileName;
-  var colorHPath = 'output/colorH/' + fileName;
-  var colorLPath = 'output/colorL/' + fileName;
-  var colorSPath = 'output/colorS/' + fileName;
+  var resizePath = 'output/' + fileName;
+  var width, height;
   console.log("in detect, path is "+path);
   gm(path)
   .size(function (err, size) {
-  if (!err)
-    console.log(size.width + ' X ' + size.height + ' pixels');
-  })
-  .resize(240, 240)
-  .noProfile()
-  .write(resizePath, function (err) {
-    if (!err) console.log(' resize done');
-    gm(resizePath)
-    .blur(8, 4)
-    .stroke("red", 7)
-    .fill("#ffffffbb")
-    .drawLine(20, 10, 50, 40)
-    .fill("#2c2")
-    .stroke("blue", 1)
-    .drawRectangle(40, 10, 50, 20)
-    .drawRectangle(60, 10, 70, 20, 3)
-    .drawArc(80, 10, 90, 20, 0, 180)
-    .drawEllipse(105, 15, 3, 5)
-    .drawCircle(125, 15, 120, 15)
-    .drawPolyline([140, 10], [143, 13], [145, 13], [147, 15], [145, 17], [143, 19])
-    .drawPolygon([160, 10], [163, 13], [165, 13], [167, 15], [165, 17], [163, 19])
-    .drawBezier([180, 10], [183, 13], [185, 13], [187, 15], [185, 17], [183, 19])
-    .fontSize(68)
-    .stroke("#efe", 2)
-    .fill("#888")
-    .drawText(-20, 98, "graphics magick")
-    .write(overlayPath, function(err){
-      if (err) return console.dir(arguments)
-      console.log(this.outname + ' created  :: ' + arguments[3])
-    }); 
-    gm(resizePath)
-    .blur(7, 3)
-    .write(blurPath, function (err) {
-      if (!err) console.log('smooth done');
-      gm(blurPath)
-      .edge(3)
-      .write(edgePath, function (err) {
-        if (!err) console.log('edge done');
-      });
-    });
-  });
-
-  
-  
-};
+    if (!err){
+      console.log('orininal size: ' + size.width + ' X ' + size.height + ' pixels');
+      var x, y, cropSize;
+      if(size.width>size.height){
+        cropSize = size.height;
+        x = Math.floor((size.width - cropSize)/2);
+        y = 0;
+      }else{
+        cropSize = size.width;
+        y = Math.floor((size.height - cropSize)/2);
+        x = 0;
+      }
+      gm(path)
+      .crop(cropSize, cropSize, x, y)
+      .resize(32, 32)
+      .write(resizePath, function (err) {
+        if (!err) console.log(' resize done');
+        gm(resizePath)
+        .toBuffer('ppm', function(err, buffer){
+          // var tmp2, tmp3;
+          // for(var i =0; i <100; i++){
+          //   tmp2= buffer[i];
+          //   tmp3= buffer[buffer.length - 1 -i];
+          //   console.log(i + ' ---- '+tmp2+' --- '+ tmp3);
+          // }
+          // var tmp1 = buffer[0];
+          // var tmp = buffer.slice(0,20);
+           console.log(buffer.length);
+          if (!err) return console.log('toBuffer done!');
+          console.log('done!');
+        })//toBuffer
+      });//write
+    }//err
+  })//size
+};//detect
 
 //database
 var mongoose = require('mongoose');
