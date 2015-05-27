@@ -1,6 +1,38 @@
 //detector
 var fs = require('fs');
 var gm = require('gm').subClass({imageMagick: true});
+var convnetjs = require("convnetjs");
+
+  var classes_txt = ['orchid', 'rose', 'poppy', 'sunflower', 'tulip'];
+  var image_dimension = 32;
+  var image_channels = 3;
+  var random_flip = true;
+  var random_position = true;
+var responseFlag = false;
+var predictedName;
+  // var layer_defs, net, trainer;
+  // layer_defs = [];
+  // layer_defs.push({type:'input', out_sx:32, out_sy:32, out_depth:3});
+  // layer_defs.push({type:'conv', sx:5, filters:16, stride:1, pad:2, activation:'relu'});
+  // layer_defs.push({type:'pool', sx:2, stride:2});
+  // layer_defs.push({type:'conv', sx:5, filters:20, stride:1, pad:2, activation:'relu'});
+  // layer_defs.push({type:'pool', sx:2, stride:2});
+  // layer_defs.push({type:'conv', sx:5, filters:20, stride:1, pad:2, activation:'relu'});
+  // layer_defs.push({type:'pool', sx:2, stride:2});
+  // layer_defs.push({type:'softmax', num_classes:5});
+  // net = new convnetjs.Net();
+  // net.makeLayers(layer_defs);
+
+var net = new convnetjs.Net();
+fs.readFile('./net.json', handleFile)
+function handleFile(err, data) {
+    if (err) throw err
+    var obj = JSON.parse(data)
+    net.fromJSON(obj);
+    // You can now play with your datas
+}
+
+var img = new convnetjs.Vol(image_dimension,image_dimension,image_channels,0.0);
 
 var detect = function(path){
   var fileName = path.split('/')[1];
@@ -27,7 +59,7 @@ var detect = function(path){
       .write(resizePath, function (err) {
         if (!err) console.log(' resize done');
         gm(resizePath)
-        .toBuffer('ppm', function(err, buffer){
+        .toBuffer('ppm', function(err, buffer){//13 byte hearder then RGB, so 32x32+13=3085
           // var tmp2, tmp3;
           // for(var i =0; i <100; i++){
           //   tmp2= buffer[i];
@@ -36,9 +68,27 @@ var detect = function(path){
           // }
           // var tmp1 = buffer[0];
           // var tmp = buffer.slice(0,20);
-           console.log(buffer.length);
-          if (!err) return console.log('toBuffer done!');
-          console.log('done!');
+          console.log(buffer.length);
+          if (!err){
+            console.log('toBuffer done!');
+            var W = image_dimension*image_dimension;
+            var j=0;
+            for(var dc=0;dc<3;dc++) {
+              var i=0;
+              for(var xc=0;xc<image_dimension;xc++) {
+                for(var yc=0;yc<image_dimension;yc++) {
+                  var ix = 13 + i * 3 + dc;
+                  img.set(yc,xc,dc,buffer[ix]/255.0-0.5);
+                  i++;
+                }//yc
+              }//xc
+            }//dc
+            net.forward(img);
+            var prediction = net.getPrediction();
+            console.log(prediction);
+            predictedName =  classes_txt[prediction];
+            responseFlag = true;
+          }//err
         })//toBuffer
       });//write
     }//err
@@ -87,7 +137,11 @@ app.post('/flower',function(req,res){
   flower.save(function (err, fluffy) {
     if (err) return console.error(err);
   });
-  res.json({'name':'Anemone','originalName':originalName});
+  while(!responseFlag){
+    
+  }
+  responseFlag = false;
+  res.json({'name': predictedName,'originalName': originalName});
 });
 
 server.listen(process.env.PORT || 3000, process.env.IP || "0.0.0.0", function(){

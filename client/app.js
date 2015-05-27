@@ -8,7 +8,7 @@ angular.module('flower', ['angularFileUpload'])
     };
     
     $scope.flowerList = [];
-    $scope.flowerList.push({"name":"Rose"});
+  //  $scope.flowerList.push({"name":"Rose"});
  
     $scope.imgShow = false; 
     $(":file").change(function () {
