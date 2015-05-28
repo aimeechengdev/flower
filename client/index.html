@@ -31,6 +31,10 @@
         <div class="span9">
           <input type="file" nv-file-select uploader="uploader"/><br/>
         </div>
+        <div ng-show = "showConfirm">
+          If you are confident it is {{flowerName}}, please press the following button to confirm.
+          <button ng-click = "confirm()">Yes, it is {{flowerName}}</button>
+        </div>
         <img ng-show="imgShow" id="myImg" src="#" alt="your image" />
       </div>
     </div>

@@ -3,9 +3,12 @@ angular.module('flower', ['angularFileUpload'])
     $scope.uploader = new FileUploader({
             url: 'flower'
     });
+    $scope.showConfirm = false;
     $scope.uploader.onSuccessItem = function(fileItem, response, status, headers) {
-      console.log(response);
+   //   console.log(response);
+      $scope.flowerName = response;
       $scope.flowerList.push(response);
+      $scope.showConfirm = true;
     };
     
     $scope.flowerList = [];
@@ -25,4 +28,12 @@ angular.module('flower', ['angularFileUpload'])
       $scope.chosenFile = $scope.uploader.queue[$scope.uploader.queue.length-1];
       $scope.chosenFile.upload();
     };
+    
+    $scope.confirm = function(){
+       $http.get("/confirm")
+    .success(function(response) {
+      $scope.showConfirm = false;
+      
+    });
+    }
   });

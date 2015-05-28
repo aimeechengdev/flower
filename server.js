@@ -2,40 +2,49 @@
 var fs = require('fs');
 var gm = require('gm').subClass({imageMagick: true});
 var convnetjs = require("convnetjs");
-
-  var classes_txt = ['orchid', 'rose', 'poppy', 'sunflower', 'tulip'];
-  var image_dimension = 32;
-  var image_channels = 3;
-  var random_flip = true;
-  var random_position = true;
+var classes_txt = ['orchid', 'rose', 'poppy', 'sunflower', 'tulip'];
+var image_dimension = 32;
+var image_channels = 3;
+var random_flip = true;
+var random_position = true;
 var responseFlag = false;
 var predictedName;
 var prediction;
-  // var layer_defs, net, trainer;
-  // layer_defs = [];
-  // layer_defs.push({type:'input', out_sx:32, out_sy:32, out_depth:3});
-  // layer_defs.push({type:'conv', sx:5, filters:16, stride:1, pad:2, activation:'relu'});
-  // layer_defs.push({type:'pool', sx:2, stride:2});
-  // layer_defs.push({type:'conv', sx:5, filters:20, stride:1, pad:2, activation:'relu'});
-  // layer_defs.push({type:'pool', sx:2, stride:2});
-  // layer_defs.push({type:'conv', sx:5, filters:20, stride:1, pad:2, activation:'relu'});
-  // layer_defs.push({type:'pool', sx:2, stride:2});
-  // layer_defs.push({type:'softmax', num_classes:5});
-  // net = new convnetjs.Net();
-  // net.makeLayers(layer_defs);
-
 var net = new convnetjs.Net();
+var img = new convnetjs.Vol(image_dimension,image_dimension,image_channels,0.0);
+var path;
+//server
+var http = require('http');
+var pathLib = require('path');
+var express = require('express');
+var app = express();
+var server = http.createServer(app);
+var timeOut;
+//database
+var mongoose = require('mongoose');
+mongoose.connect('mongodb://aimeechengdev:Pepper0620@ds031942.mongolab.com:31942/flower');
+var db = mongoose.connection;
+db.on('error', console.error.bind(console, 'connection error:'));
+db.once('open', function (callback) {
+  // yay!
+});
+var schema = mongoose.Schema({
+    name: String,
+    prediction: Number,
+    path: String
+});
+var Flower = mongoose.model('Flower', schema);
+var flower = new Flower();
+
+
 fs.readFile('./net.json', handleFile)
 function handleFile(err, data) {
     if (err) throw err
     var obj = JSON.parse(data)
     net.fromJSON(obj);
-    // You can now play with your datas
 }
 
-var img = new convnetjs.Vol(image_dimension,image_dimension,image_channels,0.0);
-
-var detect = function(path){
+function detect(path){
   var fileName = path.split('/')[1];
   var resizePath = 'output/' + fileName;
   var width, height;
@@ -100,34 +109,6 @@ var detect = function(path){
   })//size
 };//detect
 
-//database
-var mongoose = require('mongoose');
-mongoose.connect('mongodb://aimeechengdev:Pepper0620@ds031942.mongolab.com:31942/flower');
-var db = mongoose.connection;
-db.on('error', console.error.bind(console, 'connection error:'));
-db.once('open', function (callback) {
-  // yay!
-});
-var schema = mongoose.Schema({
-    name: String,
-    originalName: String,
-    path: String
-});
-var Flower = mongoose.model('Flower', schema);
-var flower = new Flower();
-
-// Flower.find(function (err, flowers) {
-//   if (err) return console.error(err);
-//   console.log(flowers)
-// });
-
-//server
-var http = require('http');
-var path = require('path');
-var express = require('express');
-var app = express();
-var server = http.createServer(app);
-var timeOut;
 function sendRes(req,res){
   clearTimeout(timeOut);
   if(responseFlag){
@@ -140,15 +121,36 @@ function sendRes(req,res){
     timeOut = setTimeout(function(){sendRes(req,res)}, 1000, "Hello.", "How are you?");
   }
 }
-app.use(express.static(path.resolve(__dirname, 'client')));
+
+function saveToMongoDB(path, prediction){
+   flower.name = classes_txt[prediction];
+   flower.prediction = prediction;
+   flower.path = path;
+   flower.save(function (err, fluffy) {
+     if (err) return console.error(err);
+     console.log("saved to dataBase");
+   });
+};
+function train(path, prediction){
+    
+};
+
+app.use(express.static(pathLib.resolve(__dirname, 'client')));
 app.use(express.bodyParser({uploadDir:'./uploads', keepExtensions: true}));
 
 app.post('/flower',function(req,res){
   console.log("post called");
   var originalName = req.files.file.name;
-  var path = req.files.file.path;
+  path = req.files.file.path;
   console.log("OriginalFilename = "+originalName+", path is "+path);
   detect(path);
+  sendRes(req,res);
+});
+
+app.get('/confirm',function(req,res){
+  console.log("get confirm called");
+  saveToMongoDB(path, prediction);
+  train(path, prediction);
   sendRes(req,res);
 });
 
