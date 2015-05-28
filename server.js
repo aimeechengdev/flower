@@ -10,6 +10,7 @@ var convnetjs = require("convnetjs");
   var random_position = true;
 var responseFlag = false;
 var predictedName;
+var prediction;
   // var layer_defs, net, trainer;
   // layer_defs = [];
   // layer_defs.push({type:'input', out_sx:32, out_sy:32, out_depth:3});
@@ -84,14 +85,18 @@ var detect = function(path){
               }//xc
             }//dc
             net.forward(img);
-            var prediction = net.getPrediction();
+            prediction = net.getPrediction();
             console.log(prediction);
             predictedName =  classes_txt[prediction];
             responseFlag = true;
-          }//err
+          }else{
+            console.log(err);
+          }//err buffer
         })//toBuffer
       });//write
-    }//err
+    }else{
+      console.log(err);
+    }//err size
   })//size
 };//detect
 
@@ -122,6 +127,19 @@ var path = require('path');
 var express = require('express');
 var app = express();
 var server = http.createServer(app);
+var timeOut;
+function sendRes(req,res){
+  clearTimeout(timeOut);
+  if(responseFlag){
+    setTimeout(function(){    
+      console.log("responseFlag = " + responseFlag + " prediction = " + prediction);
+      res.end(classes_txt[prediction]);
+    }, 1000, "Hello.", "How are you?");
+  }else{
+    console.log("responseFlag = " + responseFlag);
+    timeOut = setTimeout(function(){sendRes(req,res)}, 1000, "Hello.", "How are you?");
+  }
+}
 app.use(express.static(path.resolve(__dirname, 'client')));
 app.use(express.bodyParser({uploadDir:'./uploads', keepExtensions: true}));
 
@@ -131,17 +149,7 @@ app.post('/flower',function(req,res){
   var path = req.files.file.path;
   console.log("OriginalFilename = "+originalName+", path is "+path);
   detect(path);
-  flower.name = 'Rose';
-  flower.originalName = originalName;
-  flower.path = path;
-  flower.save(function (err, fluffy) {
-    if (err) return console.error(err);
-  });
-  while(!responseFlag){
-    
-  }
-  responseFlag = false;
-  res.json({'name': predictedName,'originalName': originalName});
+  sendRes(req,res);
 });
 
 server.listen(process.env.PORT || 3000, process.env.IP || "0.0.0.0", function(){

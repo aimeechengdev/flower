@@ -4,6 +4,7 @@ angular.module('flower', ['angularFileUpload'])
             url: 'flower'
     });
     $scope.uploader.onSuccessItem = function(fileItem, response, status, headers) {
+      console.log(response);
       $scope.flowerList.push(response);
     };
     
