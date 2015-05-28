@@ -11,7 +11,8 @@ var responseFlag = false;
 var predictedName;
 var prediction;
 var net = new convnetjs.Net();
-var img = new convnetjs.Vol(image_dimension,image_dimension,image_channels,0.0);
+var trainer = new convnetjs.SGDTrainer(net, {learning_rate:0.0001, momentum:0.9, batch_size:1, l2_decay:0.00001});
+var imgVol = new convnetjs.Vol(image_dimension,image_dimension,image_channels,0.0);
 var path;
 //server
 var http = require('http');
@@ -88,12 +89,12 @@ function detect(path){
               for(var xc=0;xc<image_dimension;xc++) {
                 for(var yc=0;yc<image_dimension;yc++) {
                   var ix = 13 + i * 3 + dc;
-                  img.set(yc,xc,dc,buffer[ix]/255.0-0.5);
+                  imgVol.set(yc,xc,dc,buffer[ix]/255.0-0.5);
                   i++;
                 }//yc
               }//xc
             }//dc
-            net.forward(img);
+            net.forward(imgVol);
             prediction = net.getPrediction();
             console.log(prediction);
             predictedName =  classes_txt[prediction];
@@ -122,17 +123,17 @@ function sendRes(req,res){
   }
 }
 
-function saveToMongoDB(path, prediction){
-   flower.name = classes_txt[prediction];
-   flower.prediction = prediction;
-   flower.path = path;
-   flower.save(function (err, fluffy) {
-     if (err) return console.error(err);
-     console.log("saved to dataBase");
-   });
+function saveToMongoDB(){
+  flower.name = classes_txt[prediction];
+  flower.prediction = prediction;
+  flower.path = path;
+  flower.save(function (err, fluffy) {
+   if (err) return console.error(err);
+   console.log("saved to dataBase");
+  });
 };
-function train(path, prediction){
-    
+function train(){
+  trainer.train(imgVol, prediction);   
 };
 
 app.use(express.static(pathLib.resolve(__dirname, 'client')));
@@ -149,9 +150,9 @@ app.post('/flower',function(req,res){
 
 app.get('/confirm',function(req,res){
   console.log("get confirm called");
-  saveToMongoDB(path, prediction);
-  train(path, prediction);
-  sendRes(req,res);
+  saveToMongoDB();
+  train();
+  res.end("confirmed");
 });
 
 server.listen(process.env.PORT || 3000, process.env.IP || "0.0.0.0", function(){
