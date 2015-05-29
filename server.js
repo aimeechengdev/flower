@@ -35,21 +35,29 @@ var flowerSchema = mongoose.Schema({
   path: String
 });
 var Flower = mongoose.model('Flower', flowerSchema);
-var flower = new Flower();
+
 var netWorkSchema = mongoose.Schema({
   net: String,
   updated: { type: Date, default: Date.now }
 });
 var Network = mongoose.model('Network', netWorkSchema);
-var network = new Network();
 
-
-fs.readFile('./net.json', handleFile)
-function handleFile(err, data) {
-    if (err) throw err
-    var obj = JSON.parse(data)
-    net.fromJSON(obj);
-}
+Network.findOne({}, null, {sort: {updated: -1}}, function(err, docs) { 
+  var obj;
+  if(docs === null){
+    fs.readFile('./net.json', handleFile)
+    function handleFile(err, data) {
+        if (err) throw err
+        var obj = JSON.parse(data)
+        net.fromJSON(obj);
+        console.log("loaded file from local file");
+    }
+  }else{
+    var objDB = JSON.parse(docs.net)
+    net.fromJSON(objDB);
+    console.log("loaded net from DB");
+  }
+});
 
 function detect(path){
   var fileName = path.split('/')[1];
@@ -130,19 +138,27 @@ function sendRes(req,res){
 }
 
 function saveToMongoDB(){
+  var flower = new Flower();
   flower.name = classes_txt[prediction];
   flower.prediction = prediction;
   flower.path = path;
   flower.save(function (err, result) {
    if (err) return console.error(err);
+   console.log(err);
+//   console.log(result);
    console.log("saved flower to dataBase");
   });
 };
+var cnt = 0;
 function train(){
+  console.log("training ...");
   trainer.train(imgVol, prediction);  
+  console.log("trainging finished");
+  var network = new Network();
   network.net = JSON.stringify(net.toJSON());
   network.save(function (err, result) {
    if (err) return console.error(err);
+ //  console.log(result);
    console.log("saved network to dataBase");
   });
 };
