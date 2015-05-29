@@ -27,15 +27,21 @@ mongoose.connect('mongodb://aimeechengdev:Pepper0620@ds031942.mongolab.com:31942
 var db = mongoose.connection;
 db.on('error', console.error.bind(console, 'connection error:'));
 db.once('open', function (callback) {
-  // yay!
+  console.log("mongoLab is connected.");
 });
-var schema = mongoose.Schema({
-    name: String,
-    prediction: Number,
-    path: String
+var flowerSchema = mongoose.Schema({
+  name: String,
+  prediction: Number,
+  path: String
 });
-var Flower = mongoose.model('Flower', schema);
+var Flower = mongoose.model('Flower', flowerSchema);
 var flower = new Flower();
+var netWorkSchema = mongoose.Schema({
+  net: String,
+  updated: { type: Date, default: Date.now }
+});
+var Network = mongoose.model('Network', netWorkSchema);
+var network = new Network();
 
 
 fs.readFile('./net.json', handleFile)
@@ -127,13 +133,18 @@ function saveToMongoDB(){
   flower.name = classes_txt[prediction];
   flower.prediction = prediction;
   flower.path = path;
-  flower.save(function (err, fluffy) {
+  flower.save(function (err, result) {
    if (err) return console.error(err);
-   console.log("saved to dataBase");
+   console.log("saved flower to dataBase");
   });
 };
 function train(){
-  trainer.train(imgVol, prediction);   
+  trainer.train(imgVol, prediction);  
+  network.net = JSON.stringify(net.toJSON());
+  network.save(function (err, result) {
+   if (err) return console.error(err);
+   console.log("saved network to dataBase");
+  });
 };
 
 app.use(express.static(pathLib.resolve(__dirname, 'client')));
