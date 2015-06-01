@@ -21,6 +21,7 @@ var express = require('express');
 var app = express();
 var server = http.createServer(app);
 var timeOut;
+var fileSavedFlag = false;
 //database
 var mongoose = require('mongoose');
 mongoose.connect('mongodb://aimeechengdev:Pepper0620@ds031942.mongolab.com:31942/flower');
@@ -137,6 +138,16 @@ function sendRes(req,res){
   }
 }
 
+function tryDetect(){
+  clearTimeout(timeOut);
+  if(fileSavedFlag){
+    detect(path);
+  }else{
+    console.log("fileSavedFlag = " + fileSavedFlag);
+    timeOut = setTimeout(tryDetect, 1000, "Hello.", "How are you?");
+  }
+}
+
 function saveToMongoDB(){
   var flower = new Flower();
   flower.name = classes_txt[prediction];
@@ -172,6 +183,19 @@ app.post('/flower',function(req,res){
   path = req.files.file.path;
   console.log("OriginalFilename = "+originalName+", path is "+path);
   detect(path);
+  sendRes(req,res);
+});
+
+app.post('/flower1',function(req,res){
+  console.log("flower1 post called1");
+  var imageBuffer = new Buffer(req.body.image, 'base64'); 
+  fs.writeFile('uploads/flower.jpg', imageBuffer, 'binary', function(err){
+            if (err) throw err
+            path = 'uploads/flower.jpg';
+            console.log('File saved.');
+            fileSavedFlag = true;
+        })
+tryDetect();
   sendRes(req,res);
 });
 
