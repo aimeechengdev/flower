@@ -22,6 +22,7 @@ var app = express();
 var server = http.createServer(app);
 var timeOut;
 var fileSavedFlag = false;
+var resizePath;
 //database
 var mongoose = require('mongoose');
 mongoose.connect('mongodb://aimeechengdev:Pepper0620@ds031942.mongolab.com:31942/flower');
@@ -31,15 +32,16 @@ db.once('open', function (callback) {
   console.log("mongoLab is connected.");
 });
 var flowerSchema = mongoose.Schema({
+  updated: { type: Date, default: Date.now },
   name: String,
   prediction: Number,
-  path: String
+  base64ImagePNG: String
 });
 var Flower = mongoose.model('Flower', flowerSchema);
 
 var netWorkSchema = mongoose.Schema({
-  net: String,
-  updated: { type: Date, default: Date.now }
+  updated: { type: Date, default: Date.now },
+  net: String
 });
 var Network = mongoose.model('Network', netWorkSchema);
 
@@ -62,7 +64,7 @@ Network.findOne({}, null, {sort: {updated: -1}}, function(err, docs) {
 
 function detect(path){
   var fileName = path.split('/')[1];
-  var resizePath = 'output/' + fileName;
+  resizePath = 'output/' + fileName;
   var width, height;
   console.log("in detect, path is "+path);
   gm(path)
@@ -86,14 +88,6 @@ function detect(path){
         if (!err) console.log(' resize done');
         gm(resizePath)
         .toBuffer('ppm', function(err, buffer){//13 byte hearder then RGB, so 32x32+13=3085
-          // var tmp2, tmp3;
-          // for(var i =0; i <100; i++){
-          //   tmp2= buffer[i];
-          //   tmp3= buffer[buffer.length - 1 -i];
-          //   console.log(i + ' ---- '+tmp2+' --- '+ tmp3);
-          // }
-          // var tmp1 = buffer[0];
-          // var tmp = buffer.slice(0,20);
           console.log(buffer.length);
           if (!err){
             console.log('toBuffer done!');
@@ -150,16 +144,22 @@ function tryDetect(req,res){
 }
 
 function saveToMongoDB(){
-  var flower = new Flower();
-  flower.name = classes_txt[prediction];
-  flower.prediction = prediction;
-  flower.path = path;
-  flower.save(function (err, result) {
-   if (err) return console.error(err);
-   console.log(err);
-//   console.log(result);
-   console.log("saved flower to dataBase");
-  });
+   gm(resizePath)
+    .toBuffer('png', function(err, buffer){
+      console.log(buffer.length);
+      var base64Img = buffer.toString('base64');
+      console.log(base64Img.length);
+      var flower = new Flower();
+      flower.name = classes_txt[prediction];
+      flower.prediction = prediction;
+      flower.base64ImagePNG = base64Img;
+      flower.save(function (err, result) {
+       if (err) return console.error(err);
+       console.log(err);
+    //   console.log(result);
+       console.log("saved flower to dataBase");
+      });
+    });
 };
 var cnt = 0;
 function train(){
