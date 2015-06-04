@@ -138,13 +138,14 @@ function sendRes(req,res){
   }
 }
 
-function tryDetect(){
+function tryDetect(req,res){
   clearTimeout(timeOut);
   if(fileSavedFlag){
     detect(path);
+    sendRes(req,res);
   }else{
     console.log("fileSavedFlag = " + fileSavedFlag);
-    timeOut = setTimeout(tryDetect, 1000, "Hello.", "How are you?");
+    timeOut = setTimeout(function(){tryDetect(req,res)}, 1000, "Hello.", "How are you?");
   }
 }
 
@@ -186,7 +187,7 @@ app.post('/flower',function(req,res){
   sendRes(req,res);
 });
 
-app.post('/flower1',function(req,res){
+app.post('/flowerPhone',function(req,res){
   console.log("flower1 post called1");
   var imageBuffer = new Buffer(req.body.image, 'base64'); 
   fs.writeFile('uploads/flower.jpg', imageBuffer, 'binary', function(err){
@@ -195,8 +196,8 @@ app.post('/flower1',function(req,res){
             console.log('File saved.');
             fileSavedFlag = true;
         })
-tryDetect();
-  sendRes(req,res);
+tryDetect(req,res);
+  
 });
 
 app.get('/confirm',function(req,res){

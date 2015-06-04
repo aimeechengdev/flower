@@ -1,7 +1,7 @@
 angular.module('flower', ['angularFileUpload'])
   .controller('FlowerController', function( $scope, $http, FileUploader) {
     $scope.uploader = new FileUploader({
-            url: 'flower1'
+            url: 'flower'
     });
     $scope.showConfirm = false;
     $scope.uploader.onSuccessItem = function(fileItem, response, status, headers) {
@@ -35,5 +35,8 @@ angular.module('flower', ['angularFileUpload'])
       $scope.showConfirm = false;
       
     });
-    }
+    };
+    $scope.cancel = function(){
+   $scope.showConfirm = false;
+    };
   });
