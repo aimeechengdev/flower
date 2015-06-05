@@ -5,10 +5,7 @@ var convnetjs = require("convnetjs");
 var classes_txt = ['orchid', 'rose', 'poppy', 'sunflower', 'tulip'];
 var image_dimension = 32;
 var image_channels = 3;
-var random_flip = true;
-var random_position = true;
 var responseFlag = false;
-var predictedName;
 var prediction;
 var net = new convnetjs.Net();
 var trainer = new convnetjs.SGDTrainer(net, {learning_rate:0.0001, momentum:0.9, batch_size:1, l2_decay:0.00001});
@@ -23,6 +20,7 @@ var server = http.createServer(app);
 var timeOut;
 var fileSavedFlag = false;
 var resizePath;
+var cnt = 0;
 //database
 var mongoose = require('mongoose');
 mongoose.connect('mongodb://aimeechengdev:Pepper0620@ds031942.mongolab.com:31942/flower');
@@ -44,28 +42,27 @@ var netWorkSchema = mongoose.Schema({
   net: String
 });
 var Network = mongoose.model('Network', netWorkSchema);
-
-Network.findOne({}, null, {sort: {updated: -1}}, function(err, docs) { 
-  var obj;
-  if(docs === null){
-    fs.readFile('./net.json', handleFile)
-    function handleFile(err, data) {
-        if (err) throw err
-        var obj = JSON.parse(data)
+function handleFile(err, data) {
+        if (err) throw err;
+        var obj = JSON.parse(data);
         net.fromJSON(obj);
         console.log("loaded file from local file");
+}
+Network.findOne({}, null, {sort: {updated: -1}}, function(err, docs) {
+  if(!err){
+    if(docs === null){
+      fs.readFile('./net.json', handleFile);
+    }else{
+      var objDB = JSON.parse(docs.net);
+      net.fromJSON(objDB);
+      console.log("loaded net from DB");
     }
-  }else{
-    var objDB = JSON.parse(docs.net)
-    net.fromJSON(objDB);
-    console.log("loaded net from DB");
   }
 });
 
 function detect(path){
   var fileName = path.split('/')[1];
   resizePath = 'output/' + fileName;
-  var width, height;
   console.log("in detect, path is "+path);
   gm(path)
   .size(function (err, size) {
@@ -88,11 +85,10 @@ function detect(path){
         if (!err) console.log(' resize done');
         gm(resizePath)
         .toBuffer('ppm', function(err, buffer){//13 byte hearder then RGB, so 32x32+13=3085
-          console.log(buffer.length);
+          console.log('toBuffer done!');
           if (!err){
-            console.log('toBuffer done!');
+            console.log(buffer.length);
             var W = image_dimension*image_dimension;
-            var j=0;
             for(var dc=0;dc<3;dc++) {
               var i=0;
               for(var xc=0;xc<image_dimension;xc++) {
@@ -106,62 +102,74 @@ function detect(path){
             net.forward(imgVol);
             prediction = net.getPrediction();
             console.log(prediction);
-            predictedName =  classes_txt[prediction];
             responseFlag = true;
           }else{
             console.log(err);
           }//err buffer
-        })//toBuffer
+        });//toBuffer
       });//write
     }else{
       console.log(err);
     }//err size
-  })//size
-};//detect
+  });//size
+}//detect
 
 function sendRes(req,res){
-  clearTimeout(timeOut);
-  if(responseFlag){
-    setTimeout(function(){    
-      console.log("responseFlag = " + responseFlag + " prediction = " + prediction);
-      res.end(classes_txt[prediction]);
-    }, 1000, "Hello.", "How are you?");
+  if(cnt>10){
+    cnt=0;
+    res.end('error');
   }else{
-    console.log("responseFlag = " + responseFlag);
-    timeOut = setTimeout(function(){sendRes(req,res)}, 1000, "Hello.", "How are you?");
+    clearTimeout(timeOut);
+    if(responseFlag){
+      setTimeout(function(){    
+        console.log("responseFlag = " + responseFlag + " prediction = " + prediction);
+        res.end(classes_txt[prediction]);
+      }, 1000, "Hello.", "How are you?");
+    }else{
+      cnt++;
+      console.log("responseFlag = " + responseFlag);
+      timeOut = setTimeout(function(){sendRes(req,res)}, 1000, "Hello.", "How are you?");
+    }
   }
 }
 
 function tryDetect(req,res){
-  clearTimeout(timeOut);
-  if(fileSavedFlag){
-    detect(path);
-    sendRes(req,res);
+  if(cnt>10){
+    cnt=0;
+    res.end('error');
   }else{
-    console.log("fileSavedFlag = " + fileSavedFlag);
-    timeOut = setTimeout(function(){tryDetect(req,res)}, 1000, "Hello.", "How are you?");
+    clearTimeout(timeOut);
+    if(fileSavedFlag){
+      detect(path);
+      sendRes(req,res);
+    }else{
+      console.log("fileSavedFlag = " + fileSavedFlag);
+      cnt++;
+      timeOut = setTimeout(function(){tryDetect(req,res)}, 1000, "Hello.", "How are you?");
+    }
   }
 }
 
 function saveToMongoDB(){
    gm(resizePath)
     .toBuffer('png', function(err, buffer){
-      console.log(buffer.length);
-      var base64Img = buffer.toString('base64');
-      console.log(base64Img.length);
-      var flower = new Flower();
-      flower.name = classes_txt[prediction];
-      flower.prediction = prediction;
-      flower.base64ImagePNG = base64Img;
-      flower.save(function (err, result) {
-       if (err) return console.error(err);
-       console.log(err);
-    //   console.log(result);
-       console.log("saved flower to dataBase");
-      });
+      if(!err){
+        console.log(buffer.length);
+        var base64Img = buffer.toString('base64');
+        console.log(base64Img.length);
+        var flower = new Flower();
+        flower.name = classes_txt[prediction];
+        flower.prediction = prediction;
+        flower.base64ImagePNG = base64Img;
+        flower.save(function (err, result) {
+         if (err) return console.error(err);
+         console.log(err);
+         console.log("saved flower to dataBase");
+        });
+      }
     });
-};
-var cnt = 0;
+}
+
 function train(){
   console.log("training ...");
   trainer.train(imgVol, prediction);  
@@ -173,7 +181,7 @@ function train(){
  //  console.log(result);
    console.log("saved network to dataBase");
   });
-};
+}
 
 app.use(express.static(pathLib.resolve(__dirname, 'client')));
 app.use(express.bodyParser({uploadDir:'./uploads', keepExtensions: true}));
@@ -191,11 +199,11 @@ app.post('/flowerPhone',function(req,res){
   console.log("flower1 post called1");
   var imageBuffer = new Buffer(req.body.image, 'base64'); 
   fs.writeFile('uploads/flower.jpg', imageBuffer, 'binary', function(err){
-            if (err) throw err
+            if (err) throw err;
             path = 'uploads/flower.jpg';
             console.log('File saved.');
             fileSavedFlag = true;
-        })
+        });
 tryDetect(req,res);
   
 });
